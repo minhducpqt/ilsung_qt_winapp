@@ -1,0 +1,9 @@
+.venv/
+.venv_check/
+__pycache__/
+*.py[cod]
+.DS_Store
+build/*
+!build/.gitkeep
+dist/*
+!dist/.gitkeep
