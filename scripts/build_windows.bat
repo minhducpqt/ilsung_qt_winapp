@@ -12,8 +12,8 @@ python -m pip install -r requirements.txt
 if exist "build" (
     rmdir /s /q "build"
 )
-if exist "dist\QTWinApp" (
-    rmdir /s /q "dist\QTWinApp"
+if exist "dist\ILSungQTWinApp" (
+    rmdir /s /q "dist\ILSungQTWinApp"
 )
 
-pyinstaller --noconfirm --clean QTWinApp.spec
+pyinstaller --noconfirm --clean ILSungQTWinApp.spec

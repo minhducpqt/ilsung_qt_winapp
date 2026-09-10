@@ -32,7 +32,7 @@ scripts\build_windows.bat
 
 **Lưu ý quan trọng:** không build file `.exe` Windows trên macOS. PyInstaller tạo binary theo hệ điều hành đang chạy, nên file build trên macOS sẽ không phải `.exe` và không chạy được trên Windows.
 
-Muốn tạo `QTWinApp.exe` thì phải chạy `scripts\build_windows.bat` trên một trong các môi trường sau:
+Muốn tạo `ILSungQTWinApp.exe` thì phải chạy `scripts\build_windows.bat` trên một trong các môi trường sau:
 
 - Máy Windows
 - Windows VM
@@ -41,10 +41,35 @@ Muốn tạo `QTWinApp.exe` thì phải chạy `scripts\build_windows.bat` trên
 ## 4. File sau khi build
 
 ```text
-dist\QTWinApp\QTWinApp.exe
+dist\ILSungQTWinApp\ILSungQTWinApp.exe
 ```
 
-Đây là bản folder (không dùng `--onefile`). Copy cả thư mục `dist\QTWinApp\` sang máy Windows khác. Máy đích không cần cài Python.
+Đây là bản folder (không dùng `--onefile`). Copy cả thư mục `dist\ILSungQTWinApp\` sang máy Windows khác. Máy đích không cần cài Python.
+
+## BUILD WINDOWS BẰNG GITHUB ACTIONS
+
+Luồng:
+
+```bash
+git add .
+git commit -m "update"
+git push origin main
+```
+
+Sau đó:
+
+GitHub repo
+→ Actions
+→ Build Windows App
+→ chọn run mới nhất
+→ Artifacts
+→ tải ILSungQTWinApp-Windows
+
+Giải nén và chạy:
+
+`ILSungQTWinApp.exe`
+
+Máy Windows đích không cần cài Python.
 
 ## Cấu trúc
 
@@ -52,8 +77,10 @@ dist\QTWinApp\QTWinApp.exe
 QT_winapp/
 ├── main.py
 ├── requirements.txt
+├── ILSungQTWinApp.spec
 ├── QTWinApp.spec
 ├── README.md
+├── .github/workflows/build-windows.yml
 ├── app/
 │   ├── __init__.py
 │   ├── main_window.py
