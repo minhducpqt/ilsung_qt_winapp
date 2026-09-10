@@ -2,26 +2,66 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QDir, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QFileDialog,
     QFrame,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
     QMessageBox,
     QProgressDialog,
     QPushButton,
     QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from app.config import APP_NAME
 from app.file_ops import copy_renamed_files, is_same_or_inside, preview_renames, scan_files
+
+
+def _format_size(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            if unit == "B":
+                return f"{int(value)} {unit}"
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{size} B"
+
+
+def _make_file_table(headers: list[str]) -> QTableWidget:
+    table = QTableWidget(0, len(headers))
+    table.setObjectName("fileTable")
+    table.setHorizontalHeaderLabels(headers)
+    table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+    table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+    table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+    table.setAlternatingRowColors(True)
+    table.setShowGrid(True)
+    table.verticalHeader().setVisible(False)
+    table.setWordWrap(False)
+    header = table.horizontalHeader()
+    header.setHighlightSections(False)
+    header.setStretchLastSection(False)
+    header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    if len(headers) > 1:
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+    return table
+
+
+def _set_table_text(table: QTableWidget, row: int, column: int, text: str, align=None) -> None:
+    item = QTableWidgetItem(text)
+    if align is not None:
+        item.setTextAlignment(align)
+    table.setItem(row, column, item)
 
 
 class ToolsPage(QWidget):
@@ -82,8 +122,7 @@ class ToolsPage(QWidget):
         self.source_path_label.setObjectName("pathLabel")
         self.source_path_label.setWordWrap(True)
 
-        self.file_list = QListWidget()
-        self.file_list.setObjectName("fileList")
+        self.source_table = _make_file_table(["STT", "Tên file", "Thư mục con", "Tên mới", "Dung lượng"])
 
         self.scan_status = QLabel("Chưa quét file")
         self.scan_status.setObjectName("hintText")
@@ -101,7 +140,7 @@ class ToolsPage(QWidget):
         layout.addWidget(heading)
         layout.addLayout(buttons)
         layout.addWidget(self.source_path_label)
-        layout.addWidget(self.file_list, 1)
+        layout.addWidget(self.source_table, 1)
         layout.addWidget(self.scan_status)
         return card
 
@@ -122,25 +161,20 @@ class ToolsPage(QWidget):
         create_button.setCursor(Qt.CursorShape.PointingHandCursor)
         create_button.clicked.connect(self._create_folder)
 
-        delete_button = QPushButton("Xóa folder")
-        delete_button.setObjectName("dangerButton")
-        delete_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        delete_button.clicked.connect(self._delete_folder)
-
         self.dest_path_label = QLabel("Chưa chọn folder đích")
         self.dest_path_label.setObjectName("pathLabel")
         self.dest_path_label.setWordWrap(True)
 
-        self.dest_info = QLabel("Chọn folder đích giống cách chọn folder nguồn. File đổi tên sẽ được copy vào đây.")
-        self.dest_info.setObjectName("hintText")
-        self.dest_info.setWordWrap(True)
+        self.dest_table = _make_file_table(["STT", "Tên file", "Thư mục con", "Dung lượng"])
+
+        self.dest_status = QLabel("Chưa chọn folder đích")
+        self.dest_status.setObjectName("hintText")
 
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 0, 0, 0)
         buttons.setSpacing(8)
         buttons.addWidget(choose_button)
         buttons.addWidget(create_button)
-        buttons.addWidget(delete_button)
         buttons.addStretch()
 
         layout = QVBoxLayout(card)
@@ -149,8 +183,8 @@ class ToolsPage(QWidget):
         layout.addWidget(heading)
         layout.addLayout(buttons)
         layout.addWidget(self.dest_path_label)
-        layout.addWidget(self.dest_info)
-        layout.addStretch()
+        layout.addWidget(self.dest_table, 1)
+        layout.addWidget(self.dest_status)
         return card
 
     def _choose_source(self) -> None:
@@ -171,11 +205,22 @@ class ToolsPage(QWidget):
             QMessageBox.warning(self, APP_NAME, f"Không quét được folder nguồn.\n{error}")
             return
 
-        self.file_list.clear()
-        for original, new_name in preview_renames(self.scanned_files):
+        self.source_table.setRowCount(len(self.scanned_files))
+        for row, (original, new_name) in enumerate(preview_renames(self.scanned_files)):
             relative = original.relative_to(self.source_dir)
-            item = QListWidgetItem(f"{relative}  →  {new_name}")
-            self.file_list.addItem(item)
+            folder = str(relative.parent) if relative.parent != Path(".") else "—"
+            _set_table_text(self.source_table, row, 0, str(row + 1), Qt.AlignmentFlag.AlignCenter)
+            _set_table_text(self.source_table, row, 1, original.name)
+            _set_table_text(self.source_table, row, 2, folder)
+            _set_table_text(self.source_table, row, 3, new_name)
+            _set_table_text(
+                self.source_table,
+                row,
+                4,
+                _format_size(original.stat().st_size),
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            )
+        self.source_table.resizeRowsToContents()
         self.scan_status.setText(f"Đã quét {len(self.scanned_files)} file")
 
     def _choose_destination(self) -> None:
@@ -207,48 +252,39 @@ class ToolsPage(QWidget):
         self._set_destination(target)
         QMessageBox.information(self, APP_NAME, f"Đã tạo và chọn folder đích:\n{target}")
 
-    def _delete_folder(self) -> None:
-        start = str(self.dest_dir or Path.home())
-        selected = QFileDialog.getExistingDirectory(self, "Chọn folder cần xóa", start)
-        if not selected:
-            return
-        target = Path(selected)
-        if target.resolve() in {Path.home().resolve(), Path(QDir.rootPath()).resolve()}:
-            QMessageBox.warning(self, APP_NAME, "Không xóa folder hệ thống này.")
-            return
-        if self.source_dir and target.resolve() == self.source_dir.resolve():
-            QMessageBox.warning(self, APP_NAME, "Không xóa folder nguồn đang chọn.")
-            return
-
-        confirm = QMessageBox(self)
-        confirm.setIcon(QMessageBox.Icon.Warning)
-        confirm.setWindowTitle("Xác nhận xóa folder")
-        confirm.setText("Bạn có chắc muốn xóa folder này?")
-        confirm.setInformativeText(
-            f"{target}\n\nToàn bộ file và thư mục bên trong sẽ bị xóa. Không hoàn tác được."
-        )
-        confirm.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        confirm.setDefaultButton(QMessageBox.StandardButton.No)
-        yes_button = confirm.button(QMessageBox.StandardButton.Yes)
-        no_button = confirm.button(QMessageBox.StandardButton.No)
-        if yes_button is not None:
-            yes_button.setText("Xóa")
-        if no_button is not None:
-            no_button.setText("Hủy")
-        if confirm.exec() != QMessageBox.StandardButton.Yes:
-            return
-
-        if not QDir(str(target)).removeRecursively():
-            QMessageBox.warning(self, APP_NAME, f"Không xóa được folder.\n{target}")
-            return
-        if self.dest_dir and self.dest_dir.resolve() == target.resolve():
-            self.dest_dir = None
-            self.dest_path_label.setText("Chưa chọn folder đích")
-        QMessageBox.information(self, APP_NAME, f"Đã xóa folder:\n{target}")
-
     def _set_destination(self, target: Path) -> None:
         self.dest_dir = target
         self.dest_path_label.setText(f"Folder đích: {target}")
+        self._refresh_dest_files()
+
+    def _refresh_dest_files(self) -> None:
+        if self.dest_dir is None:
+            self.dest_table.setRowCount(0)
+            self.dest_status.setText("Chưa chọn folder đích")
+            return
+        try:
+            files = scan_files(self.dest_dir)
+        except OSError as error:
+            self.dest_table.setRowCount(0)
+            self.dest_status.setText(f"Không đọc được folder đích: {error}")
+            return
+
+        self.dest_table.setRowCount(len(files))
+        for row, path in enumerate(files):
+            relative = path.relative_to(self.dest_dir)
+            folder = str(relative.parent) if relative.parent != Path(".") else "—"
+            _set_table_text(self.dest_table, row, 0, str(row + 1), Qt.AlignmentFlag.AlignCenter)
+            _set_table_text(self.dest_table, row, 1, path.name)
+            _set_table_text(self.dest_table, row, 2, folder)
+            _set_table_text(
+                self.dest_table,
+                row,
+                3,
+                _format_size(path.stat().st_size),
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            )
+        self.dest_table.resizeRowsToContents()
+        self.dest_status.setText(f"Folder đích đang có {len(files)} file")
 
     def _copy_renamed(self) -> None:
         if self.source_dir is None:
@@ -305,9 +341,12 @@ class ToolsPage(QWidget):
             )
         except OSError as error:
             progress.close()
+            self._refresh_dest_files()
             QMessageBox.warning(self, APP_NAME, f"Copy thất bại.\n{error}")
             return
         progress.close()
+
+        self._refresh_dest_files()
 
         if progress.wasCanceled():
             QMessageBox.information(

@@ -154,19 +154,29 @@ QLabel#hintText {
     font-size: 12px;
 }
 
-QListWidget#fileList,
-QTreeView#folderTree {
-    background-color: #F9FAFB;
+QTableWidget#fileTable {
+    background-color: #FFFFFF;
+    alternate-background-color: #F8FAFC;
     border: 1px solid #E5E7EB;
     border-radius: 8px;
     color: #111827;
     font-size: 13px;
-    padding: 4px;
+    gridline-color: #E5E7EB;
 }
 
-QListWidget#fileList::item,
-QTreeView#folderTree::item {
-    padding: 4px 6px;
+QTableWidget#fileTable::item {
+    padding: 6px 8px;
+}
+
+QHeaderView::section {
+    background-color: #F3F4F6;
+    border: none;
+    border-bottom: 1px solid #E5E7EB;
+    border-right: 1px solid #E5E7EB;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px;
 }
 
 QSplitter::handle {
