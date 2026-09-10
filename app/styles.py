@@ -110,6 +110,70 @@ QPushButton#primaryButton:pressed {
     background-color: #1E40AF;
 }
 
+QPushButton#secondaryButton {
+    background-color: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+
+QPushButton#secondaryButton:hover {
+    background-color: #F3F4F6;
+}
+
+QPushButton#dangerButton {
+    background-color: #FFFFFF;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    color: #B91C1C;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+
+QPushButton#dangerButton:hover {
+    background-color: #FEF2F2;
+}
+
+QLabel#sectionTitle {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QLabel#pathLabel {
+    color: #374151;
+    font-size: 12px;
+}
+
+QLabel#hintText {
+    color: #6B7280;
+    font-size: 12px;
+}
+
+QListWidget#fileList,
+QTreeView#folderTree {
+    background-color: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    color: #111827;
+    font-size: 13px;
+    padding: 4px;
+}
+
+QListWidget#fileList::item,
+QTreeView#folderTree::item {
+    padding: 4px 6px;
+}
+
+QSplitter::handle {
+    background-color: transparent;
+    width: 12px;
+}
+
 QMessageBox {
     background-color: #FFFFFF;
 }

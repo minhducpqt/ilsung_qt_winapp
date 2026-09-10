@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.config import APP_NAME, APP_VERSION, WINDOW_HEIGHT, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_TITLE, WINDOW_WIDTH
+from app.tools_page import ToolsPage
 
 
 class HomePage(QWidget):
@@ -25,8 +26,13 @@ class HomePage(QWidget):
         title = QLabel(APP_NAME)
         title.setObjectName("pageTitle")
 
-        subtitle = QLabel("Python + PySide6")
+        subtitle = QLabel("Công cụ hỗ trợ lắp ráp và sản xuất linh kiện điện thoại")
         subtitle.setObjectName("pageSubtitle")
+        subtitle.setWordWrap(True)
+
+        tool_hint = QLabel("Công cụ đầu tiên: quét folder nguồn, đổi tên F00001... rồi copy sang folder đích.")
+        tool_hint.setObjectName("hintText")
+        tool_hint.setWordWrap(True)
 
         status_dot = QLabel("●")
         status_dot.setObjectName("statusText")
@@ -51,6 +57,7 @@ class HomePage(QWidget):
         card_layout.setSpacing(12)
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
+        card_layout.addWidget(tool_hint)
         card_layout.addSpacing(8)
         card_layout.addLayout(status_row)
         card_layout.addSpacing(12)
@@ -116,9 +123,7 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.setObjectName("contentArea")
         self.stack.addWidget(HomePage())
-        self.stack.addWidget(
-            PlaceholderPage("Công cụ", "Trang công cụ sẽ được bổ sung ở các phiên bản sau.")
-        )
+        self.stack.addWidget(ToolsPage())
         self.stack.addWidget(
             PlaceholderPage("Cài đặt", "Trang cài đặt sẽ được bổ sung ở các phiên bản sau.")
         )
@@ -137,7 +142,7 @@ class MainWindow(QMainWindow):
         brand = QLabel(APP_NAME)
         brand.setObjectName("brandTitle")
 
-        brand_sub = QLabel("Desktop App")
+        brand_sub = QLabel("ILSungTech")
         brand_sub.setObjectName("brandSubtitle")
 
         self.nav_group = QButtonGroup(self)

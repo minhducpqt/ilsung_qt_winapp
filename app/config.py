@@ -3,13 +3,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-APP_NAME = "QT Windows App"
+APP_NAME = "ILSungTech Tools"
 APP_VERSION = "1.0.0"
-WINDOW_TITLE = "QT Windows App"
-WINDOW_WIDTH = 1100
-WINDOW_HEIGHT = 700
-WINDOW_MIN_WIDTH = 800
-WINDOW_MIN_HEIGHT = 500
+WINDOW_TITLE = "ILSungTech Tools"
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 740
+WINDOW_MIN_WIDTH = 960
+WINDOW_MIN_HEIGHT = 560
 
 
 def app_base_dir() -> Path:
