@@ -41,10 +41,12 @@ Muốn tạo `ILSungQTWinApp.exe` thì phải chạy `scripts\build_windows.bat`
 ## 4. File sau khi build
 
 ```text
-dist\ILSungQTWinApp\ILSungQTWinApp.exe
+dist\ILSungQTWinApp.exe
 ```
 
-Đây là bản folder (không dùng `--onefile`). Copy cả thư mục `dist\ILSungQTWinApp\` sang máy Windows khác. Máy đích không cần cài Python.
+Đây là bản one-file. Copy riêng `ILSungQTWinApp.exe` sang máy Windows khác và chạy. Máy đích không cần cài Python.
+
+Lần mở đầu có thể chậm hơn vì PyInstaller giải nén runtime tạm thời. Điều này là bình thường.
 
 ## BUILD WINDOWS BẰNG GITHUB ACTIONS
 

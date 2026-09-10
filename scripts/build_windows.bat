@@ -15,5 +15,8 @@ if exist "build" (
 if exist "dist\ILSungQTWinApp" (
     rmdir /s /q "dist\ILSungQTWinApp"
 )
+if exist "dist\ILSungQTWinApp.exe" (
+    del /f /q "dist\ILSungQTWinApp.exe"
+)
 
 pyinstaller --noconfirm --clean ILSungQTWinApp.spec

@@ -34,7 +34,7 @@ jobs:
       - name: Verify executable exists
         shell: pwsh
         run: |
-          $exe = "dist\ILSungQTWinApp\ILSungQTWinApp.exe"
+          $exe = "dist\ILSungQTWinApp.exe"
           if (-not (Test-Path -LiteralPath $exe)) {
             Write-Host "ERROR: $exe was not created."
             if (Test-Path "dist") {
@@ -48,6 +48,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ILSungQTWinApp-Windows
-          path: dist/ILSungQTWinApp/
+          path: dist/ILSungQTWinApp.exe
           if-no-files-found: error
           retention-days: 1
