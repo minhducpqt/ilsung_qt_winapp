@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QStyle,
     QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
@@ -248,11 +249,17 @@ class CCCDBatchPage(QWidget):
 
         self.choose_button = QPushButton("Chọn thư mục")
         self.start_button = QPushButton("Bắt đầu phân tích")
+        self.rerun_button = QPushButton()
         self.stop_button = QPushButton("Dừng")
         self.export_button = QPushButton("Xuất Excel")
         self.image_mode_button = QPushButton("Hiện ảnh")
         self.name_mode_button = QPushButton("Chỉ tên file")
         self.start_button.setObjectName("primaryButton")
+        self.rerun_button.setObjectName("iconButton")
+        self.rerun_button.setToolTip("Phân tích lại toàn bộ")
+        self.rerun_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        self.rerun_button.setIconSize(QSize(16, 16))
+        self.rerun_button.setFixedSize(36, 36)
         self.stop_button.setObjectName("dangerButton")
         for button in (
             self.choose_button,
@@ -262,6 +269,7 @@ class CCCDBatchPage(QWidget):
         ):
             button.setObjectName("secondaryButton")
         self.stop_button.setEnabled(False)
+        self.rerun_button.setEnabled(False)
         self.export_button.setEnabled(False)
         self.image_mode_button.setCheckable(True)
         self.name_mode_button.setCheckable(True)
@@ -273,6 +281,7 @@ class CCCDBatchPage(QWidget):
         for button in (
             self.choose_button,
             self.start_button,
+            self.rerun_button,
             self.stop_button,
             self.export_button,
             self.image_mode_button,
@@ -282,6 +291,7 @@ class CCCDBatchPage(QWidget):
 
         self.choose_button.clicked.connect(self._choose_folder)
         self.start_button.clicked.connect(self._start)
+        self.rerun_button.clicked.connect(self._force_start)
         self.stop_button.clicked.connect(self._stop)
         self.export_button.clicked.connect(self._export)
         self.image_mode_button.clicked.connect(lambda: self._set_mode(MODE_IMAGE))
@@ -342,6 +352,7 @@ class CCCDBatchPage(QWidget):
         buttons = QHBoxLayout()
         buttons.addWidget(self.choose_button)
         buttons.addWidget(self.start_button)
+        buttons.addWidget(self.rerun_button)
         buttons.addWidget(self.stop_button)
         buttons.addWidget(self.export_button)
         buttons.addWidget(self.image_mode_button)
@@ -418,6 +429,7 @@ class CCCDBatchPage(QWidget):
         self._fill_preview_rows()
         restored = self._restore_draft()
         self.total_label.setText(f"Tổng ảnh: {len(files)}")
+        self.rerun_button.setEnabled(True)
         if restored:
             self.status_label.setText(f"Đã tải {len(files)} ảnh và khôi phục {restored} dòng từ bản lưu tạm. Sửa trực tiếp trên bảng.")
         else:
@@ -538,6 +550,7 @@ class CCCDBatchPage(QWidget):
     def _set_running(self, running: bool) -> None:
         self.choose_button.setEnabled(not running)
         self.start_button.setEnabled(not running)
+        self.rerun_button.setEnabled(not running and bool(self.image_files))
         self.stop_button.setEnabled(running)
         self.export_button.setEnabled(self._has_exportable())
 
@@ -547,30 +560,46 @@ class CCCDBatchPage(QWidget):
     def _pending_files(self) -> list[Path]:
         return [path for path in self.image_files if str(path) not in self._user_touched]
 
-    def _start(self) -> None:
+    def _force_start(self) -> None:
+        self._start(force=True)
+
+    def _start(self, force: bool = False) -> None:
         if self._thread is not None:
             return
         if not self.image_files:
             QMessageBox.information(self, APP_NAME, "Hãy chọn thư mục chứa ảnh trước.")
             return
-        pending = self._pending_files()
-        if not pending:
-            QMessageBox.information(
-                self,
-                APP_NAME,
-                "Mọi dòng đã có dữ liệu sửa tay hoặc bản lưu tạm. Không còn ảnh cần phân tích.",
-            )
-            return
-        if self._user_touched:
+        if force:
             confirm = QMessageBox.question(
                 self,
                 APP_NAME,
-                "Phân tích sẽ chạy các ảnh chưa sửa tay. Dòng đã chỉnh trên bảng được giữ nguyên.",
+                "Phân tích lại toàn bộ sẽ ghi đè mọi dòng, kể cả đã sửa tay. Tiếp tục?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
             )
             if confirm != QMessageBox.StandardButton.Yes:
                 return
+            self._user_touched.clear()
+            pending = list(self.image_files)
+        else:
+            pending = self._pending_files()
+            if not pending:
+                QMessageBox.information(
+                    self,
+                    APP_NAME,
+                    "Mọi dòng đã có dữ liệu sửa tay hoặc bản lưu tạm. Dùng nút làm mới để phân tích lại toàn bộ.",
+                )
+                return
+            if self._user_touched:
+                confirm = QMessageBox.question(
+                    self,
+                    APP_NAME,
+                    "Phân tích sẽ chạy các ảnh chưa sửa tay. Dòng đã chỉnh trên bảng được giữ nguyên.",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if confirm != QMessageBox.StandardButton.Yes:
+                    return
         self.total_label.setText(f"Tổng ảnh: {len(self.image_files)}")
         self.progress.setMaximum(len(pending))
         self.progress.setValue(0)

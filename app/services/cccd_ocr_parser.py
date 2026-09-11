@@ -4,7 +4,8 @@ import re
 from dataclasses import dataclass
 
 from app.services.cccd_qr_parser import CCCD_ID_RE, OLD_ID_RE, normalize_qr_date
-from app.services.vietnamese_names import looks_like_vietnamese_name, normalize_person_name, pick_vietnamese_name
+from app.services.vietnamese_names import fold_vi, looks_like_vietnamese_name, normalize_person_name, pick_vietnamese_name
+from app.services.vietnamese_provinces import contains_province
 
 CCCD_IN_TEXT_RE = re.compile(r"\b(\d{12})\b")
 OLD_IN_TEXT_RE = re.compile(r"\b(\d{9})\b")
@@ -32,6 +33,57 @@ FATHER_LABELS = ("họ tên cha", "ho ten cha", "cha:", "father")
 MOTHER_LABELS = ("họ tên mẹ", "ho ten me", "mẹ:", "me:", "mother")
 OLD_ID_LABELS = ("cmnd", "số cũ", "so cu", "old id", "identity card")
 
+# Chữ chỉ dẫn in trên CCCD — không phải nội dung khai thác.
+_GUIDE_PHRASES = (
+    "họ, chữ đệm và tên khai sinh",
+    "ho, chu dem va ten khai sinh",
+    "họ chữ đệm và tên khai sinh",
+    "date of issuance",
+    "place of residence",
+    "place of origin",
+    "date of expiry",
+    "date of birth",
+    "date of issue",
+    "nơi thường trú",
+    "noi thuong tru",
+    "nơi cư trú",
+    "noi cu tru",
+    "có giá trị đến",
+    "co gia tri den",
+    "số định danh cá nhân",
+    "so dinh danh ca nhan",
+    "quốc tịch",
+    "quoc tich",
+    "nationality",
+    "quê quán",
+    "que quan",
+    "họ và tên",
+    "ho va ten",
+    "full name",
+    "ngày sinh",
+    "ngay sinh",
+    "giới tính",
+    "gioi tinh",
+    "ngày cấp",
+    "ngay cap",
+    "identity card",
+    "residence",
+    "gender",
+    "origin",
+    "expiry",
+    "dob",
+    "sex",
+    "số / no",
+    "so / no",
+    "số/no",
+    "so/no",
+)
+_GUIDE_RE = re.compile(
+    "|".join(re.escape(phrase) for phrase in sorted(_GUIDE_PHRASES, key=len, reverse=True)),
+    flags=re.IGNORECASE,
+)
+_LABEL_CRUMBS = {"full", "name", "sex", "gender", "dob", "id", "i", "of", "the"}
+
 
 @dataclass
 class OCRItem:
@@ -58,57 +110,119 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def _looks_like_name(text: str) -> bool:
-    return looks_like_vietnamese_name(text) or (
-        len(text.strip()) >= 4
-        and not any(ch.isdigit() for ch in text)
-        and len(text.split()) >= 2
-    )
-
-
-def _normalize_gender(text: str) -> str | None:
-    value = _norm(text)
-    if value in {"nam", "male"}:
-        return "Nam"
-    if value in {"nữ", "nu", "female"}:
-        return "Nữ"
-    if "nam" in value and "nữ" not in value and "nu" not in value:
-        return "Nam"
-    if "nữ" in value or re.search(r"\bnu\b", value) or "female" in value:
-        return "Nữ"
-    return None
+def _strip_guide_text(text: str) -> str:
+    cleaned = _GUIDE_RE.sub(" ", text)
+    cleaned = re.sub(r"[:/\\|]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" :.-")
+    words = [word for word in cleaned.split() if fold_vi(word) not in _LABEL_CRUMBS]
+    return " ".join(words)
 
 
 def _is_labelish(text: str) -> bool:
-    lowered = _norm(text)
-    if lowered in {"full name", "date of birth", "dob", "sex", "gender", "no", "place of residence", "residence"}:
+    stripped = _strip_guide_text(text)
+    folded = fold_vi(stripped)
+    if folded in {"nam", "nu", "male", "female"}:
+        return False
+    if len(stripped) <= 2:
         return True
-    if lowered.startswith("/ ") or lowered.startswith("no:"):
+    if folded in {"full name", "date of birth", "place of residence", "nationality", "viet nam", "vietnam"}:
         return True
     return False
 
 
-def _after_label(lines: list[str], labels: tuple[str, ...]) -> str | None:
+def _looks_like_name(text: str) -> bool:
+    stripped = _strip_guide_text(text)
+    if not stripped or _is_labelish(stripped):
+        return False
+    if looks_like_vietnamese_name(stripped) or looks_like_vietnamese_name(text):
+        return True
+    words = stripped.split()
+    if any(fold_vi(word) in _LABEL_CRUMBS for word in words):
+        return False
+    return len(stripped) >= 4 and not any(ch.isdigit() for ch in stripped) and 2 <= len(words) <= 6
+
+
+def _normalize_gender(text: str) -> str | None:
+    value = _norm(_strip_guide_text(text) or text)
+    tokens = value.split()
+    if value in {"nam", "male"} or tokens == ["nam"]:
+        return "Nam"
+    if value in {"nữ", "nu", "female"}:
+        return "Nữ"
+    if len(tokens) <= 2 and "nam" in tokens and "nữ" not in value and "nu" not in tokens:
+        return "Nam"
+    if len(tokens) <= 2 and ("nữ" in value or "nu" in tokens or "female" in tokens):
+        return "Nữ"
+    return None
+
+
+def _value_after_labels(line: str, labels: tuple[str, ...]) -> str | None:
+    lowered = _norm(line)
+    remainder = None
+    for label in labels:
+        match = re.search(re.escape(label), lowered)
+        if not match:
+            continue
+        after = _strip_guide_text(line[match.end() :])
+        if after and not _is_labelish(after):
+            remainder = after
+    if remainder:
+        return remainder
+    whole = _strip_guide_text(line)
+    if whole and not _is_labelish(whole) and not any(label in lowered for label in labels if len(label) <= 3):
+        # Line may be "Họ và tên / Full name: NGUYEN VAN A"
+        if any(label in lowered for label in labels):
+            return whole
+    return None
+
+
+def _next_content(lines: list[str], start: int, limit: int = 3) -> tuple[str, int] | None:
+    end = min(start + 1 + limit, len(lines))
+    for index in range(start + 1, end):
+        raw = lines[index].strip()
+        cleaned = _strip_guide_text(raw)
+        if cleaned and not _is_labelish(raw) and not _is_labelish(cleaned):
+            return cleaned, index
+    return None
+
+
+def _find_labeled(lines: list[str], labels: tuple[str, ...]) -> tuple[str, int] | None:
     for index, line in enumerate(lines):
         lowered = _norm(line)
-        for label in labels:
-            if label in lowered:
-                match = re.search(re.escape(label), lowered)
-                if match:
-                    original_after = line[match.end() :].strip(" :.-/")
-                    original_after = re.sub(
-                        r"^(full name|date of birth|dob|sex|gender|place of residence|residence)\s*:?\s*",
-                        "",
-                        original_after,
-                        flags=re.IGNORECASE,
-                    ).strip(" :.-/")
-                    if original_after and not _is_labelish(original_after):
-                        return original_after.strip()
-                if index + 1 < len(lines):
-                    nxt = lines[index + 1].strip()
-                    if nxt and not _is_labelish(nxt):
-                        return nxt
+        if not any(label in lowered for label in labels):
+            continue
+        same_line = _value_after_labels(line, labels)
+        if same_line:
+            return same_line, index
+        following = _next_content(lines, index)
+        if following:
+            return following
     return None
+
+
+def _after_label(lines: list[str], labels: tuple[str, ...]) -> str | None:
+    found = _find_labeled(lines, labels)
+    return found[0] if found else None
+
+
+def _parse_address(lines: list[str]) -> str | None:
+    found = _find_labeled(lines, ADDRESS_LABELS)
+    if not found:
+        return None
+    address, index = found
+    if len(address) < 6 or CCCD_ID_RE.fullmatch(address):
+        return None
+    if index + 1 < len(lines):
+        nxt_raw = lines[index + 1].strip()
+        nxt = _strip_guide_text(nxt_raw)
+        if (
+            nxt
+            and not _is_labelish(nxt_raw)
+            and contains_province(nxt)
+            and fold_vi(nxt) not in fold_vi(address)
+        ):
+            address = f"{address.rstrip(',; ')}, {nxt}"
+    return address
 
 
 def _collect_dates(lines: list[str], blob: str) -> list[str]:
@@ -178,9 +292,9 @@ def parse_cccd_ocr(items: list[OCRItem] | list[str], full_text: str | None = Non
 
     name = _after_label(lines, NAME_LABELS)
     if name and _looks_like_name(name):
-        result.full_name = normalize_person_name(name)
+        result.full_name = normalize_person_name(_strip_guide_text(name) or name)
     if not result.full_name:
-        result.full_name = pick_vietnamese_name(lines)
+        result.full_name = pick_vietnamese_name([line for line in lines if not _is_labelish(line)])
 
     dates = _collect_dates(lines, blob)
     dob_line = _after_label(lines, DOB_LABELS)
@@ -198,9 +312,7 @@ def parse_cccd_ocr(items: list[OCRItem] | list[str], full_text: str | None = Non
                 result.gender = gender
                 break
 
-    address = _after_label(lines, ADDRESS_LABELS)
-    if address and len(address) >= 6 and not CCCD_ID_RE.fullmatch(address):
-        result.address = address
+    result.address = _parse_address(lines)
 
     issue_line = _after_label(lines, ISSUE_LABELS)
     if issue_line:

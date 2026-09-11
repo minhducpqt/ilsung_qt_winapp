@@ -162,6 +162,23 @@ QPushButton#dangerButton:hover {
     background-color: #FEF2F2;
 }
 
+QPushButton#iconButton {
+    background-color: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    padding: 0;
+}
+
+QPushButton#iconButton:hover {
+    background-color: #EFF6FF;
+    border: 1px solid #93C5FD;
+}
+
+QPushButton#iconButton:disabled {
+    background-color: #F9FAFB;
+    border: 1px solid #E5E7EB;
+}
+
 QLabel#sectionTitle {
     color: #111827;
     font-size: 16px;

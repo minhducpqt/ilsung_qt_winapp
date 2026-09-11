@@ -53,6 +53,47 @@ def test_non_cccd_text():
     assert parsed.personal_id is None
 
 
+def test_name_skips_full_name_label_on_next_line():
+    items = [
+        OCRItem("Số / No: 001234567890"),
+        OCRItem("Họ và tên / Full name:"),
+        OCRItem("I Full name"),
+        OCRItem("LƯU MINH ĐỨC"),
+        OCRItem("Ngày sinh / Date of birth: 24/10/1987"),
+    ]
+    parsed = parse_cccd_ocr(items)
+    assert parsed.full_name == "Lưu Minh Đức"
+    assert "Full" not in (parsed.full_name or "")
+
+
+def test_residence_joins_second_line_when_it_has_province():
+    items = [
+        OCRItem("001234567890"),
+        OCRItem("Nơi thường trú / Place of residence"),
+        OCRItem("12A14 - Hh1b - Linh Đàm, Hoàng Liệt, Hoàng Mai"),
+        OCRItem("Hà Nội"),
+        OCRItem("Có giá trị đến / Date of expiry"),
+        OCRItem("01/01/2030"),
+    ]
+    parsed = parse_cccd_ocr(items)
+    assert parsed.address is not None
+    assert "Hoàng Mai" in parsed.address
+    assert "Hà Nội" in parsed.address
+    assert "giá trị" not in parsed.address.lower()
+
+
+def test_residence_does_not_join_next_guide_line():
+    items = [
+        OCRItem("001234567890"),
+        OCRItem("Nơi thường trú / Place of residence"),
+        OCRItem("Hoàng Liệt, Hoàng Mai, Hà Nội"),
+        OCRItem("Có giá trị đến / Date of expiry"),
+        OCRItem("01/01/2030"),
+    ]
+    parsed = parse_cccd_ocr(items)
+    assert parsed.address == "Hoàng Liệt, Hoàng Mai, Hà Nội"
+
+
 def test_gender_female_and_dash_date():
     items = [
         OCRItem("001987654321"),

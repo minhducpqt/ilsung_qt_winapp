@@ -50,6 +50,7 @@ _SURNAME_FOLDED = {fold_vi(name) for name in COMMON_SURNAMES}
 _HEADER_HINTS = (
     "cong hoa", "xa hoi", "viet nam", "can cuoc", "cong dan", "socialist",
     "identity", "full name", "date of birth", "ho chieu", "nationality",
+    "place of residence", "que quan", "quoc tich", "gioi tinh",
 )
 
 
