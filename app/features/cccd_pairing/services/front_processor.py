@@ -29,13 +29,20 @@ def _apply_parsed(result: CCCDPairImageResult, parsed) -> None:
     result.mother_name = getattr(parsed, "mother_name", None)
 
 
-def process_front(image, engine=None, file_path: str | Path | None = None) -> CCCDPairImageResult:
+def process_front(
+    image,
+    engine=None,
+    file_path: str | Path | None = None,
+    payloads: list[str] | None = None,
+    ocr_items=None,
+) -> CCCDPairImageResult:
     path = Path(file_path) if file_path else Path("front.jpg")
     result = CCCDPairImageResult(file_name=path.name, file_path=str(path))
-    try:
-        payloads = decode_qr_from_bgr(image)
-    except Exception:
-        payloads = []
+    if payloads is None:
+        try:
+            payloads = decode_qr_from_bgr(image)
+        except Exception:
+            payloads = []
     for payload in payloads:
         parsed = parse_cccd_qr(payload)
         if parsed and parsed.certain and is_cccd_id(parsed.personal_id):
@@ -46,7 +53,7 @@ def process_front(image, engine=None, file_path: str | Path | None = None) -> CC
             return result
 
     try:
-        items = ocr_image(image, engine=engine)
+        items = list(ocr_items) if ocr_items is not None else ocr_image(image, engine=engine)
     except Exception:
         result.source = SOURCE_NONE
         result.recognition_status = STATUS_UNRECOGNIZED

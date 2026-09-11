@@ -5,8 +5,8 @@ from io import BytesIO
 from pathlib import Path
 
 from app.features.cccd_pairing.models import CCCDPersonPairRecord
-from app.features.cccd_pairing.services.orientation import ensure_print_upright
-from app.services.image_utils import load_bgr, resize_max_side
+from app.features.cccd_pairing.services.orientation import load_display_bgr
+from app.services.image_utils import resize_max_side
 
 CARD_CSS_MM = 95
 PRINT_MAX_SIDE = 1400
@@ -52,10 +52,9 @@ def _encode_image(path: str | None, side: str | None = None) -> str | None:
         return None
     from PIL import Image
 
-    bgr = load_bgr(source)
+    bgr = load_display_bgr(source, side)
     if bgr is None:
         return None
-    bgr = ensure_print_upright(bgr, side)
     bgr = resize_max_side(bgr, PRINT_MAX_SIDE)
     image = Image.fromarray(bgr[:, :, ::-1])
     buffer = BytesIO()

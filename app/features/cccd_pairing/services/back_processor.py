@@ -66,15 +66,18 @@ def process_back(
     file_path: str | Path | None = None,
     known_front_ids: set[str] | None = None,
     allow_full_ocr: bool = True,
+    payloads: list[str] | None = None,
+    ocr_items=None,
 ) -> CCCDPairImageResult:
     path = Path(file_path) if file_path else Path("back.jpg")
     result = CCCDPairImageResult(file_name=path.name, file_path=str(path))
     known = {item for item in (known_front_ids or set()) if is_cccd_id(item)}
 
-    try:
-        payloads = decode_qr_from_bgr(image)
-    except Exception:
-        payloads = []
+    if payloads is None:
+        try:
+            payloads = decode_qr_from_bgr(image)
+        except Exception:
+            payloads = []
     for payload in payloads:
         parsed = parse_cccd_qr(payload)
         result.qr_raw = payload
@@ -86,13 +89,50 @@ def process_back(
                 result.full_name = parsed.full_name
             return result
 
+    if ocr_items:
+        full_text = items_to_text(ocr_items)
+        result.ocr_text = full_text
+        if looks_like_mrz(full_text):
+            result.mrz_raw = full_text
+        exact = _exact_known_id(full_text, known) or next(
+            (item for item in extract_digit_candidates(full_text) if is_cccd_id(item)),
+            None,
+        )
+        if exact and is_cccd_id(exact):
+            result.personal_id = exact
+            result.source = SOURCE_MRZ_EXACT if exact in known or looks_like_mrz(full_text) else SOURCE_OCR
+            result.recognition_status = STATUS_CERTAIN if exact in known or looks_like_mrz(full_text) else STATUS_NEED_REVIEW
+            parsed = parse_mrz(full_text)
+            if parsed.full_name:
+                result.full_name = parsed.full_name
+            return result
+        parsed_mrz = parse_mrz(full_text)
+        if parsed_mrz.personal_id and is_cccd_id(parsed_mrz.personal_id):
+            result.personal_id = parsed_mrz.personal_id
+            result.source = SOURCE_MRZ
+            result.recognition_status = STATUS_CERTAIN if parsed_mrz.looks_like_mrz else STATUS_NEED_REVIEW
+            result.full_name = parsed_mrz.full_name
+            return result
+        fuzzy = _fuzzy_known_id(full_text, known)
+        if fuzzy:
+            result.suggested_id = fuzzy
+            result.personal_id = fuzzy
+            result.source = SOURCE_OCR
+            result.recognition_status = STATUS_NEED_REVIEW
+            result.note = "Gợi ý số CCCD (OCR lỗi, cần check lại)"
+            return result
+        result.source = SOURCE_OCR
+        result.recognition_status = STATUS_UNRECOGNIZED
+        result.note = "Không tìm thấy CCCD mặt sau"
+        return result
+
     mrz_items = []
     try:
         mrz_items = ocr_image(_mrz_roi(image), engine=engine)
     except Exception:
         mrz_items = []
     mrz_text = items_to_text(mrz_items)
-    result.mrz_raw = mrz_text or None
+    result.mrz_raw = result.mrz_raw or mrz_text or None
     exact = _exact_known_id(mrz_text, known)
     if exact:
         result.personal_id = exact

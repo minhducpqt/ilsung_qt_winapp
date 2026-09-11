@@ -10,7 +10,13 @@ from app.features.cccd_pairing.models import (
     STATUS_NEED_REVIEW,
     CCCDPairImageResult,
 )
-from app.features.cccd_pairing.services.matcher import build_pairing_result, fuzzy_id_suggestion, id_in_text, manual_pair
+from app.features.cccd_pairing.services.matcher import (
+    build_pairing_result,
+    draft_batch_from_images,
+    fuzzy_id_suggestion,
+    id_in_text,
+    manual_pair,
+)
 
 
 def _front(name: str, personal_id: str | None) -> CCCDPairImageResult:
@@ -32,6 +38,17 @@ def _back(name: str, personal_id: str | None = None, mrz: str | None = None, **k
         mrz_raw=mrz,
         **kwargs,
     )
+
+
+def test_draft_pass1_does_not_pair():
+    front = _front("f.jpg", "006209003918")
+    back = _back("b.jpg", personal_id="006209003918", mrz="IDVNM006209003918<<<<<<<<<<<<<<<")
+    draft = draft_batch_from_images([front, back])
+    assert len(draft.persons) == 1
+    assert draft.persons[0].match_status == FRONT_ONLY
+    assert draft.persons[0].back_file_name is None
+    assert len(draft.orphan_backs) == 1
+    assert draft.stats.paired == 0
 
 
 def test_exact_id_and_mrz_text_match_certain():

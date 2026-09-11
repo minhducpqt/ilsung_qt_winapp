@@ -39,6 +39,7 @@ hiddenimports += [
     "PIL",
     "openpyxl",
     "numpy",
+    "multiprocessing",
 ]
 
 datas += [("app/resources", "app/resources")]

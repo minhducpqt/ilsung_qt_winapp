@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.models.cccd_result import SOURCE_QR, STATUS_CERTAIN, CCCDResult
-from app.services.cccd_processor import CCCDProcessor
+from app.services.cccd_processor import CCCDProcessor, analyze_image_path, batch_worker_count
 from app.services.excel_exporter import export_cccd_results
 from app.services.qr_tools import create_qr
 
@@ -27,6 +27,18 @@ def test_export_keeps_ids_as_text(tmp_path: Path):
     assert sheet["C2"].number_format == "@"
     assert sheet["A1"].value == "STT"
     book.close()
+
+
+def test_batch_worker_count_stays_in_range():
+    assert batch_worker_count(0) == 1
+    assert batch_worker_count(1) == 1
+    assert 2 <= batch_worker_count(20) <= 6
+
+
+def test_analyze_image_path_is_picklable():
+    import pickle
+
+    pickle.dumps(analyze_image_path)
 
 
 def test_processor_reads_valid_qr_as_certain(tmp_path: Path):

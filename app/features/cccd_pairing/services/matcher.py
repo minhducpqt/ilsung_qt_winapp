@@ -76,6 +76,36 @@ def _attach_back(person: CCCDPersonPairRecord, back: CCCDPairImageResult) -> Non
         person.full_name = back.full_name
 
 
+def draft_batch_from_images(images: list[CCCDPairImageResult], total: int | None = None) -> PairingBatchResult:
+    """Pass-1 snapshot: keep extracted content, do not pair front/back yet."""
+    fronts = [item for item in images if item.side == SIDE_FRONT]
+    backs = [item for item in images if item.side == SIDE_BACK]
+    unknowns = [item for item in images if item.side == SIDE_UNKNOWN]
+    persons: list[CCCDPersonPairRecord] = []
+    for front in fronts:
+        person = CCCDPersonPairRecord(match_status=FRONT_ONLY, note=front.note)
+        _copy_front_fields(person, front)
+        persons.append(person)
+    stats = PairingStats(
+        total=len(images) if total is None else total,
+        processed=len(images),
+        front=len(fronts),
+        back=len(backs),
+        unknown=len(unknowns),
+        paired=0,
+        front_only=len(persons),
+        orphan_back=len(backs),
+        duplicate=0,
+    )
+    return PairingBatchResult(
+        images=list(images),
+        persons=persons,
+        orphan_backs=list(backs),
+        unknowns=unknowns,
+        stats=stats,
+    )
+
+
 def apply_known_ids_to_backs(backs: list[CCCDPairImageResult], known_ids: set[str]) -> None:
     for back in backs:
         haystack = "\n".join(part for part in (back.mrz_raw, back.ocr_text, back.qr_raw) if part)

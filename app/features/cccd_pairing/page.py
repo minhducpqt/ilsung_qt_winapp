@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -34,9 +34,27 @@ from app.features.cccd_pairing.models import (
 from app.features.cccd_pairing.services.excel_exporter import export_pairing_xlsx
 from app.features.cccd_pairing.services.html_exporter import export_pairing_html
 from app.features.cccd_pairing.services.matcher import manual_pair
+from app.features.cccd_pairing.services.orientation import load_display_bgr
 from app.features.cccd_pairing.worker import CCCDPairingWorker
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+
+def _bgr_to_pixmap(bgr) -> QPixmap | None:
+    if bgr is None:
+        return None
+    rgb = bgr[:, :, ::-1].copy()
+    height, width, channels = rgb.shape
+    image = QImage(rgb.data, width, height, channels * width, QImage.Format.Format_RGB888)
+    pixmap = QPixmap.fromImage(image.copy())
+    return pixmap if not pixmap.isNull() else None
+
+
+def _oriented_pixmap(path: str | None, side: str | None, max_w: int, max_h: int) -> QPixmap | None:
+    pixmap = _bgr_to_pixmap(load_display_bgr(path, side))
+    if pixmap is None:
+        return None
+    return pixmap.scaled(max_w, max_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 COL_ACTION = 0
 COL_STT = 1
 EDITABLE_COLUMNS = {2, 3, 4, 5, 6, 7, 8, 9, 10, 15}
@@ -87,26 +105,23 @@ class PairPreviewDialog(QDialog):
         info = QLabel(f"{person.full_name or '-'}  •  {person.match_label()}")
         info.setObjectName("hintText")
         images = QHBoxLayout()
-        images.addWidget(self._side("Mặt trước", person.front_crop or person.front_file_path, person.front_file_name), 1)
-        images.addWidget(self._side("Mặt sau", person.back_crop or person.back_file_path, person.back_file_name), 1)
+        images.addWidget(self._side("Mặt trước", person.front_crop or person.front_file_path, person.front_file_name, "front"), 1)
+        images.addWidget(self._side("Mặt sau", person.back_crop or person.back_file_path, person.back_file_name, "back"), 1)
         layout.addWidget(info)
         layout.addLayout(images, 1)
 
-    def _side(self, title: str, path: str | None, filename: str | None) -> QFrame:
+    def _side(self, title: str, path: str | None, filename: str | None, side: str) -> QFrame:
         frame = QFrame()
         box = QVBoxLayout(frame)
-        caption = QLabel(f"{title}\n{filename or 'Không có ảnh mặt sau' if 'sau' in title.lower() else 'Không có ảnh'}")
+        caption = QLabel(f"{title}\n{filename or 'Không có ảnh mặt sau' if side == 'back' else 'Không có ảnh'}")
         caption.setWordWrap(True)
         image = QLabel()
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if path and Path(path).exists():
-            pixmap = QPixmap(path)
-            if not pixmap.isNull():
-                image.setPixmap(pixmap.scaled(420, 280, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            else:
-                image.setText("Không mở được ảnh")
+        pixmap = _oriented_pixmap(path, side, 420, 280)
+        if pixmap is not None:
+            image.setPixmap(pixmap)
         else:
-            image.setText("Không có ảnh mặt sau" if "sau" in title.lower() else "Không có ảnh")
+            image.setText("Không có ảnh mặt sau" if side == "back" else "Không có ảnh")
         box.addWidget(caption)
         box.addWidget(image, 1)
         return frame
@@ -174,11 +189,11 @@ class OrphanBackDialog(QDialog):
             return
         item = current.data(Qt.ItemDataRole.UserRole)
         path = item.crop_path or item.file_path
-        pixmap = QPixmap(path)
-        if pixmap.isNull():
+        pixmap = _oriented_pixmap(path, "back", 360, 200)
+        if pixmap is None:
             self.preview.setText(item.note or item.file_name)
             return
-        self.preview.setPixmap(pixmap.scaled(360, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.preview.setPixmap(pixmap)
 
     def _pair(self) -> None:
         back_item = self.back_list.currentItem()
@@ -204,7 +219,7 @@ class CCCDPairingPage(QWidget):
         title = QLabel("Ghép CCCD 2 mặt")
         title.setObjectName("pageTitle")
         subtitle = QLabel(
-            "Nhận diện mặt trước/mặt sau, ghép theo số CCCD 12 số, sửa trên bảng, xuất Excel (dữ liệu) và HTML (in A4)."
+            "Bước 1: phân tích song song nhiều process, lưu mặt và dữ liệu. Bước 2: xong cả loạt mới ghép cặp theo số CCCD."
         )
         subtitle.setObjectName("pageSubtitle")
         subtitle.setWordWrap(True)

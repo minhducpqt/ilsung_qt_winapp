@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from app.features.cccd_pairing.services.matcher import build_pairing_result
-from app.features.cccd_pairing.services.pipeline import run_pass1
-from app.services.cccd_ocr_reader import load_ocr_engine
+from app.features.cccd_pairing.services.matcher import build_pairing_result, draft_batch_from_images
+from app.features.cccd_pairing.services.pipeline import pairing_worker_count, run_pass1_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -33,36 +31,26 @@ class CCCDPairingWorker(QObject):
         cancelled = False
         images = []
         try:
-            self.status_changed.emit("Đang khởi tạo OCR...")
-            engine = load_ocr_engine()
+            workers = pairing_worker_count(len(self.files))
+            self.status_changed.emit(f"Đang phân tích song song ({workers} process)...")
             total = len(self.files)
 
-            def on_image(result, processed, all_count):
+            def on_image(result, processed, all_count, results):
                 self.current_file_changed.emit(result.file_name)
                 self.image_processed.emit(result, processed, all_count)
                 self.progress_changed.emit(processed, all_count)
-                paired = build_pairing_result(images)
-                paired.stats.total = all_count
-                paired.stats.processed = processed
-                self.stats_changed.emit(paired.stats)
-                self.batch_ready.emit(paired)
-                self.status_changed.emit(f"Đang phân tích: {processed} / {all_count}")
+                draft = draft_batch_from_images(results, total=all_count)
+                self.stats_changed.emit(draft.stats)
+                self.batch_ready.emit(draft)
+                self.status_changed.emit(f"Đang phân tích: {processed} / {all_count}  •  {workers} process")
 
-            def should_cancel():
-                return self.cancel_requested
-
-            for path in self.files:
-                if self.cancel_requested:
-                    cancelled = True
-                    break
-                name = Path(path).name
-                self.current_file_changed.emit(name)
-                self.status_changed.emit(f"Đang xử lý: {name}")
-                batch = run_pass1([path], engine=engine, should_cancel=should_cancel)
-                if not batch:
-                    continue
-                images.extend(batch)
-                on_image(batch[0], len(images), total)
+            images = run_pass1_parallel(
+                self.files,
+                should_cancel=lambda: self.cancel_requested,
+                on_image=on_image,
+                workers=workers,
+            )
+            cancelled = self.cancel_requested and len(images) < total
 
             self.status_changed.emit("Đang ghép mặt trước / mặt sau...")
             result = build_pairing_result(images)

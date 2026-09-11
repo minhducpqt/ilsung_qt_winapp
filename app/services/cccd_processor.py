@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from app.models.cccd_result import (
@@ -19,6 +20,34 @@ from app.services.cccd_qr_reader import read_qr_payloads
 from app.services.image_utils import load_bgr
 
 logger = logging.getLogger(__name__)
+_PROCESS_ENGINE = None
+
+
+def batch_worker_count(file_count: int) -> int:
+    if file_count <= 1:
+        return 1
+    cpu = os.cpu_count() or 2
+    return max(1, min(file_count, max(2, cpu - 1), 6))
+
+
+def init_batch_process_engine() -> None:
+    global _PROCESS_ENGINE
+    _PROCESS_ENGINE = load_ocr_engine()
+
+
+def analyze_image_path(path: str) -> CCCDResult:
+    name = Path(path).name
+    try:
+        processor = CCCDProcessor()
+        processor._ocr_engine = _PROCESS_ENGINE or load_ocr_engine()
+        return processor.process_image(path)
+    except Exception:
+        logger.info("RESULT UNRECOGNIZED")
+        return CCCDResult(
+            file_name=name,
+            file_path=str(path),
+            note="Không đọc được file ảnh",
+        )
 
 
 class CCCDProcessor:
