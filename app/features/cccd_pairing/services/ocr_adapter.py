@@ -31,5 +31,6 @@ def _run(engine, image) -> list[OCRItem]:
         if not text:
             continue
         confidence = float(item[2]) if len(item) > 2 and item[2] is not None else None
-        items.append(OCRItem(text=text, confidence=confidence))
+        box = item[0] if item else None
+        items.append(OCRItem(text=text, confidence=confidence, box=box))
     return items

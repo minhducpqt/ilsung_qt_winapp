@@ -89,6 +89,7 @@ _LABEL_CRUMBS = {"full", "name", "sex", "gender", "dob", "id", "i", "of", "the"}
 class OCRItem:
     text: str
     confidence: float | None = None
+    box: object | None = None
 
 
 @dataclass

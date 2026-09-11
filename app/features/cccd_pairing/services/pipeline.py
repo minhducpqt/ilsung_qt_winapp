@@ -11,13 +11,13 @@ from app.features.cccd_pairing.models import (
     CCCDPairImageResult,
 )
 from app.features.cccd_pairing.services.back_processor import process_back
-from app.features.cccd_pairing.services.card_detector import detect_card, prefer_landscape, rotate_image
+from app.features.cccd_pairing.services.card_detector import detect_card, prefer_landscape
 from app.features.cccd_pairing.services.front_processor import process_front
 from app.features.cccd_pairing.services.matcher import build_pairing_result
-from app.features.cccd_pairing.services.ocr_adapter import items_to_text, ocr_image
+from app.features.cccd_pairing.services.ocr_adapter import items_to_text
+from app.features.cccd_pairing.services.orientation import ensure_print_upright, normalize_orientation
 from app.features.cccd_pairing.services.side_classifier import classify_side
 from app.services.cccd_ocr_reader import load_ocr_engine
-from app.services.cccd_qr_reader import decode_qr_from_bgr
 from app.services.image_utils import load_bgr, resize_max_side
 
 logger = logging.getLogger(__name__)
@@ -37,42 +37,6 @@ def save_working_jpeg(image, dest: Path, max_side: int = 1500, quality: int = 92
     rgb = working[:, :, ::-1]
     Image.fromarray(rgb).save(dest, format="JPEG", quality=quality, optimize=True)
     return dest
-
-
-def _score_variant(image, engine) -> tuple[float, list[str], list[str]]:
-    try:
-        payloads = decode_qr_from_bgr(image)
-    except Exception:
-        payloads = []
-    try:
-        items = ocr_image(image, engine=engine)
-    except Exception:
-        items = []
-    texts = [item.text for item in items]
-    decision = classify_side(image, texts=texts, qr_payloads=payloads)
-    score = decision.front_score + decision.back_score + (3 if payloads else 0)
-    if image.shape[1] >= image.shape[0]:
-        score += 0.4
-    return score, payloads, texts
-
-
-def normalize_orientation(image, engine):
-    best_image = prefer_landscape(image)
-    best_score = -1.0
-    best_payloads: list[str] = []
-    best_texts: list[str] = []
-    for angle in (0, 90, 180, 270):
-        variant = rotate_image(image, angle)
-        variant = prefer_landscape(variant)
-        score, payloads, texts = _score_variant(variant, engine)
-        if score > best_score:
-            best_score = score
-            best_image = variant
-            best_payloads = payloads
-            best_texts = texts
-        if payloads and score >= 6:
-            break
-    return best_image, best_payloads, best_texts
 
 
 def process_one_image(path: str | Path, engine, known_front_ids: set[str] | None = None) -> CCCDPairImageResult:
@@ -100,12 +64,8 @@ def process_one_image(path: str | Path, engine, known_front_ids: set[str] | None
             except Exception:
                 pass
     decision = classify_side(oriented, texts=texts, qr_payloads=payloads)
-    dest = cache_dir() / f"{file_path.stem}_{decision.side.lower()}.jpg"
-    try:
-        save_working_jpeg(oriented, dest)
-        crop_path = str(dest)
-    except Exception:
-        crop_path = None
+    side_hint = "front" if decision.side == SIDE_FRONT else "back" if decision.side == SIDE_BACK else None
+    oriented = ensure_print_upright(oriented, side_hint)
 
     if decision.side == SIDE_FRONT:
         result = process_front(oriented, engine=engine, file_path=file_path)
@@ -113,14 +73,12 @@ def process_one_image(path: str | Path, engine, known_front_ids: set[str] | None
             fallback = process_front(original, engine=engine, file_path=file_path)
             if fallback.personal_id and not result.personal_id:
                 result = fallback
-                crop_path = str(file_path)
     elif decision.side == SIDE_BACK:
         result = process_back(oriented, engine=engine, file_path=file_path, known_front_ids=known_front_ids)
         if not result.personal_id and crop.used_crop:
             fallback = process_back(original, engine=engine, file_path=file_path, known_front_ids=known_front_ids)
             if fallback.personal_id:
                 result = fallback
-                crop_path = str(file_path)
     else:
         front = process_front(oriented, engine=engine, file_path=file_path)
         back = process_back(oriented, engine=engine, file_path=file_path, known_front_ids=known_front_ids, allow_full_ocr=False)
@@ -138,6 +96,15 @@ def process_one_image(path: str | Path, engine, known_front_ids: set[str] | None
                 note="Không xác định mặt",
                 ocr_text=items_to_text([]),
             )
+
+    side_hint = "front" if decision.side == SIDE_FRONT else "back" if decision.side == SIDE_BACK else None
+    oriented = ensure_print_upright(oriented, side_hint)
+    dest = cache_dir() / f"{file_path.stem}_{decision.side.lower()}.jpg"
+    try:
+        save_working_jpeg(oriented, dest)
+        crop_path = str(dest)
+    except Exception:
+        crop_path = None
 
     result.side = decision.side
     result.side_confidence = decision.confidence

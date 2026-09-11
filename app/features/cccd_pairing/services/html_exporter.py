@@ -5,6 +5,8 @@ from io import BytesIO
 from pathlib import Path
 
 from app.features.cccd_pairing.models import CCCDPersonPairRecord
+from app.features.cccd_pairing.services.orientation import ensure_print_upright
+from app.services.image_utils import load_bgr, resize_max_side
 
 CARD_CSS_MM = 95
 PRINT_MAX_SIDE = 1400
@@ -42,28 +44,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 
-def _encode_image(path: str | None) -> str | None:
+def _encode_image(path: str | None, side: str | None = None) -> str | None:
     if not path:
         return None
     source = Path(path)
     if not source.exists():
         return None
-    from PIL import Image, ImageOps
+    from PIL import Image
 
-    with Image.open(source) as image:
-        image = ImageOps.exif_transpose(image)
-        image = image.convert("RGB")
-        longest = max(image.size)
-        if longest > PRINT_MAX_SIDE:
-            scale = PRINT_MAX_SIDE / float(longest)
-            image = image.resize((int(image.width * scale), int(image.height * scale)))
-        buffer = BytesIO()
-        image.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    bgr = load_bgr(source)
+    if bgr is None:
+        return None
+    bgr = ensure_print_upright(bgr, side)
+    bgr = resize_max_side(bgr, PRINT_MAX_SIDE)
+    image = Image.fromarray(bgr[:, :, ::-1])
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
     return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def _card_html(crop_path: str | None, fallback_path: str | None) -> str:
-    encoded = _encode_image(crop_path) or _encode_image(fallback_path)
+def _card_html(crop_path: str | None, fallback_path: str | None, side: str) -> str:
+    encoded = _encode_image(crop_path, side) or _encode_image(fallback_path, side)
     if not encoded:
         return ""
     return f'<div class="card-block"><img class="id-card-image" src="{encoded}"></div>'
@@ -72,10 +73,10 @@ def _card_html(crop_path: str | None, fallback_path: str | None) -> str:
 def _page_html(person: CCCDPersonPairRecord) -> str:
     if not person.front_file_path and not person.front_crop:
         return ""
-    front = _card_html(person.front_crop, person.front_file_path)
+    front = _card_html(person.front_crop, person.front_file_path, "front")
     if not front:
         return ""
-    back = _card_html(person.back_crop, person.back_file_path)
+    back = _card_html(person.back_crop, person.back_file_path, "back")
     return f'<section class="person-page">{front}{back}</section>'
 
 
