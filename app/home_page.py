@@ -88,7 +88,7 @@ class HomePage(QWidget):
 
         cards = (
             ("Sẵn sàng", "Đổi tên & copy file", "Quét folder nguồn, đặt tên F00001, F00002... rồi copy sang folder đích."),
-            ("Sắp triển khai", "OCR căn cước / ảnh", "Nhận dạng chữ trên ảnh, bóc tách thông tin giấy tờ hành chính."),
+            ("Sẵn sàng", "Đọc CCCD hàng loạt", "Ưu tiên QR, không có QR hợp lệ thì OCR offline và xuất Excel."),
             ("Sắp triển khai", "Excel & báo cáo", "Đọc và tạo file .xlsx phục vụ thống kê, danh sách, biên bản."),
             ("Sắp triển khai", "QR trong ảnh", "Tạo QR, đọc QR và tìm vị trí mã QR trong một tấm ảnh."),
         )

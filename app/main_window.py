@@ -24,6 +24,7 @@ from app.config import (
     WINDOW_TITLE,
     WINDOW_WIDTH,
 )
+from app.cccd_batch_page import CCCDBatchPage
 from app.home_page import HomePage
 from app.placeholder_page import PlaceholderPage
 from app.settings_page import SettingsPage
@@ -37,10 +38,6 @@ PLACEHOLDER_COPY = {
     "file_to_excel": (
         "Xuất danh sách file ra Excel",
         "Sẽ xuất bảng tên file, dung lượng, đường dẫn từ một folder ra file .xlsx.",
-    ),
-    "ocr_cccd": (
-        "OCR ảnh / căn cước",
-        "Sẽ nhận dạng chữ trên ảnh, ví dụ căn cước công dân, rồi bóc tách họ tên, số CCCD, ngày sinh.",
     ),
     "qr_find": (
         "Tìm QR trong ảnh",
@@ -98,6 +95,8 @@ class MainWindow(QMainWindow):
             return HomePage(on_open_first_tool=lambda: self._open_page("rename_copy"))
         if page_id == "rename_copy":
             return ToolsPage()
+        if page_id == "ocr_cccd":
+            return CCCDBatchPage()
         if page_id == "settings":
             return SettingsPage()
         title, description = PLACEHOLDER_COPY[page_id]
@@ -158,6 +157,7 @@ class MainWindow(QMainWindow):
         footer = QLabel(f"v{APP_VERSION}")
         footer.setObjectName("sidebarFooter")
 
+
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(14, 20, 14, 14)
         layout.setSpacing(4)
@@ -167,3 +167,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(scroll, 1)
         layout.addWidget(footer)
         return sidebar
+
+    def closeEvent(self, event) -> None:
+        if "ocr_cccd" in self._page_ids:
+            page = self.stack.widget(self._page_ids.index("ocr_cccd"))
+            stop = getattr(page, "_stop", None)
+            thread = getattr(page, "_thread", None)
+            if callable(stop):
+                stop()
+            if thread is not None:
+                thread.wait(5000)
+        event.accept()

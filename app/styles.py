@@ -173,6 +173,27 @@ QLabel#pathLabel {
     font-size: 12px;
 }
 
+QLabel#statLabel {
+    color: #1F2937;
+    font-size: 13px;
+    font-weight: 600;
+    padding-right: 16px;
+}
+
+QProgressBar {
+    background-color: #E5E7EB;
+    border: none;
+    border-radius: 7px;
+    color: #111827;
+    height: 18px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: #2563EB;
+    border-radius: 7px;
+}
+
 QLabel#hintText {
     color: #6B7280;
     font-size: 12px;

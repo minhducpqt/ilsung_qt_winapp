@@ -106,3 +106,17 @@ QT_winapp/
 - `qrcode` — tạo mã QR
 - `opencv-python-headless` — tìm và đọc QR trong ảnh
 - `rapidocr-onnxruntime` — OCR ảnh / căn cước, chạy offline
+- `numpy` — xử lý ảnh
+
+## Đọc CCCD hàng loạt
+
+Menu **Nhận dạng & Số hóa → Đọc CCCD hàng loạt**.
+
+Cách test với folder ảnh mẫu:
+
+1. Tạo một thư mục, ví dụ `~/cccd_mau`.
+2. Bỏ vào đó các ảnh `.jpg/.png` (mặt trước, mặt sau, ảnh không phải CCCD). Không commit ảnh CCCD thật vào git.
+3. Chạy app, chọn thư mục, bấm **Bắt đầu phân tích**.
+4. Kết quả hiện từng dòng. Có thể **Dừng** giữa chừng rồi **Xuất Excel**.
+
+Pipeline: đọc QR trước → chỉ OCR khi QR không phải CCCD 12 số hợp lệ. App chạy offline.

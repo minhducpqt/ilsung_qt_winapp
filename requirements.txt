@@ -2,6 +2,7 @@ PySide6-Essentials
 PyInstaller
 openpyxl
 Pillow
+numpy
 qrcode
 opencv-python-headless
 rapidocr-onnxruntime
