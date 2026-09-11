@@ -28,22 +28,46 @@ QLabel#sidebarFooter {
     font-size: 11px;
 }
 
-QPushButton#navButton {
+QScrollArea#sidebarScroll {
+    background-color: #FFFFFF;
+    border: none;
+}
+
+QScrollArea#sidebarScroll QWidget {
+    background-color: #FFFFFF;
+}
+
+QLabel#navGroupLabel {
+    color: #9CA3AF;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 8px 10px 2px 10px;
+}
+
+QPushButton#navButton,
+QPushButton#navButtonSoon {
     background-color: transparent;
     border: none;
     border-radius: 8px;
     color: #4B5563;
-    font-size: 14px;
-    padding: 10px 14px;
+    font-size: 13px;
+    padding: 8px 12px;
     text-align: left;
 }
 
-QPushButton#navButton:hover {
+QPushButton#navButtonSoon {
+    color: #6B7280;
+}
+
+QPushButton#navButton:hover,
+QPushButton#navButtonSoon:hover {
     background-color: #F3F4F6;
     color: #111827;
 }
 
-QPushButton#navButton:checked {
+QPushButton#navButton:checked,
+QPushButton#navButtonSoon:checked {
     background-color: #E8F0FE;
     color: #1D4ED8;
     font-weight: 600;
@@ -152,6 +176,101 @@ QLabel#pathLabel {
 QLabel#hintText {
     color: #6B7280;
     font-size: 12px;
+}
+
+QFrame#heroCard {
+    background-color: #163A5F;
+    border: none;
+    border-radius: 16px;
+}
+
+QLabel#heroEyebrow {
+    color: #93C5FD;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+QLabel#heroTitle {
+    color: #FFFFFF;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+QLabel#heroBody {
+    color: #DBEAFE;
+    font-size: 14px;
+}
+
+QLabel#heroStatus {
+    color: #86EFAC;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton#heroPrimaryButton {
+    background-color: #2563EB;
+    border: none;
+    border-radius: 8px;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 180px;
+    padding: 10px 18px;
+}
+
+QPushButton#heroPrimaryButton:hover {
+    background-color: #1D4ED8;
+}
+
+QPushButton#heroGhostButton {
+    background-color: transparent;
+    border: 1px solid #93C5FD;
+    border-radius: 8px;
+    color: #DBEAFE;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 100px;
+    padding: 10px 18px;
+}
+
+QPushButton#heroGhostButton:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+QFrame#featureCard {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+}
+
+QLabel#featureTitle {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QLabel#featureText {
+    color: #6B7280;
+    font-size: 13px;
+}
+
+QLabel#readyBadge,
+QLabel#soonBadge {
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+QLabel#readyBadge {
+    background-color: #DCFCE7;
+    color: #166534;
+}
+
+QLabel#soonBadge {
+    background-color: #FEF3C7;
+    color: #92400E;
 }
 
 QTableWidget#fileTable {

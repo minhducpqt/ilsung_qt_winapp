@@ -99,5 +99,10 @@ QT_winapp/
 
 ## Phụ thuộc
 
-- `PySide6-Essentials` (Qt Widgets, đủ cho app này)
-- `PyInstaller`
+- `PySide6-Essentials` — giao diện Qt
+- `PyInstaller` — đóng gói Windows
+- `openpyxl` — đọc / tạo file Excel `.xlsx`
+- `Pillow` — xử lý ảnh
+- `qrcode` — tạo mã QR
+- `opencv-python-headless` — tìm và đọc QR trong ảnh
+- `rapidocr-onnxruntime` — OCR ảnh / căn cước, chạy offline

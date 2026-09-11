@@ -1,2 +1,7 @@
 PySide6-Essentials
 PyInstaller
+openpyxl
+Pillow
+qrcode
+opencv-python-headless
+rapidocr-onnxruntime
