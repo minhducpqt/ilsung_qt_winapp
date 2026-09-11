@@ -25,6 +25,7 @@ from app.config import (
     WINDOW_WIDTH,
 )
 from app.cccd_batch_page import CCCDBatchPage
+from app.features.cccd_pairing.page import CCCDPairingPage
 from app.home_page import HomePage
 from app.placeholder_page import PlaceholderPage
 from app.settings_page import SettingsPage
@@ -97,6 +98,8 @@ class MainWindow(QMainWindow):
             return ToolsPage()
         if page_id == "ocr_cccd":
             return CCCDBatchPage()
+        if page_id == "cccd_pair":
+            return CCCDPairingPage()
         if page_id == "settings":
             return SettingsPage()
         title, description = PLACEHOLDER_COPY[page_id]
@@ -169,8 +172,10 @@ class MainWindow(QMainWindow):
         return sidebar
 
     def closeEvent(self, event) -> None:
-        if "ocr_cccd" in self._page_ids:
-            page = self.stack.widget(self._page_ids.index("ocr_cccd"))
+        for page_id in ("ocr_cccd", "cccd_pair"):
+            if page_id not in self._page_ids:
+                continue
+            page = self.stack.widget(self._page_ids.index(page_id))
             flush = getattr(page, "flush_autosave", None)
             if callable(flush):
                 flush()

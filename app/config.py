@@ -35,6 +35,7 @@ MENU_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         "Nhận dạng & Số hóa",
         [
             ("ocr_cccd", "Đọc CCCD hàng loạt", "ready"),
+            ("cccd_pair", "Ghép CCCD 2 mặt", "ready"),
             ("qr_find", "Tìm QR trong ảnh", "soon"),
         ],
     ),

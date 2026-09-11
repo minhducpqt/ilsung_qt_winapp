@@ -639,9 +639,6 @@ class CCCDBatchPage(QWidget):
         self._result_by_path[result.file_path] = result
         self._sync_results()
         self._apply_result_to_row(Path(result.file_path), result)
-        row = self._row_for_path(result.file_path)
-        if row is not None:
-            self.table.scrollToItem(self.table.item(row, COL_STT))
         self.export_button.setEnabled(True)
         self._schedule_autosave()
 

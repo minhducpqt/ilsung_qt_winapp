@@ -25,6 +25,7 @@ for package in (
 
 hiddenimports += collect_submodules("PySide6")
 hiddenimports += collect_submodules("rapidocr_onnxruntime")
+hiddenimports += collect_submodules("app.features.cccd_pairing")
 hiddenimports += [
     "PySide6.QtCore",
     "PySide6.QtGui",

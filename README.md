@@ -123,3 +123,15 @@ Cách test với folder ảnh mẫu:
 Pipeline: đọc QR trước (ZXing, rồi OpenCV) → chỉ OCR khi QR không phải CCCD 12 số hợp lệ. App chạy offline.
 
 Bảng kết quả giống Excel: bấm vào ô và sửa trực tiếp, có ảnh trên từng dòng. Bản nháp tự lưu vào thư mục dữ liệu người dùng (`ILSungOfficeTools/cccd_drafts`), mở lại cùng thư mục ảnh sẽ khôi phục.
+
+## Ghép CCCD 2 mặt
+
+Menu **Nhận dạng & Số hóa → Ghép CCCD 2 mặt**. Tính năng độc lập, không thay thế **Đọc CCCD hàng loạt**.
+
+1. Chọn thư mục ảnh (không đệ quy).
+2. Bấm **Phân tích**: detect/crop thẻ, phân loại mặt trước/sau, đọc QR/OCR/MRZ, ghép theo số CCCD 12 số.
+3. Sửa trên bảng. Bấm **Xem** ở đầu dòng để xem 2 mặt. **Mặt sau chưa ghép** để ghép thủ công.
+4. **Xuất Excel** = dữ liệu text (`ket_qua_cccd_2_mat.xlsx`).
+5. **Xuất HTML** = in A4, mỗi người một trang, chỉ ảnh mặt trước/mặt sau khoảng 95mm (`in_cccd_2_mat.html`).
+
+Không commit ảnh CCCD thật vào git.

@@ -163,6 +163,12 @@ class HomePage(QWidget):
                 "ocr_cccd",
             ),
             (
+                "Sẵn sàng",
+                "Ghép CCCD 2 mặt",
+                "Tự nhận mặt trước/mặt sau, ghép theo số CCCD, xuất Excel và HTML in A4.",
+                "cccd_pair",
+            ),
+            (
                 "Sắp triển khai",
                 "Excel & báo cáo",
                 "Đọc và tạo file .xlsx phục vụ thống kê, danh sách, biên bản.",
