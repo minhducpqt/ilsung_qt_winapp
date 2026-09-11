@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -58,6 +59,19 @@ MENU_GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         ],
     ),
 ]
+
+
+def user_data_dir() -> Path:
+    """Writable per-user folder for drafts and local cache."""
+    if sys.platform == "win32":
+        root = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library" / "Application Support"
+    else:
+        root = Path(os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share"))
+    path = root / "ILSungOfficeTools"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def app_base_dir() -> Path:

@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
 
     def _create_page(self, page_id: str) -> QWidget:
         if page_id == "home":
-            return HomePage(on_open_first_tool=lambda: self._open_page("rename_copy"))
+            return HomePage(on_open_page=self._open_page)
         if page_id == "rename_copy":
             return ToolsPage()
         if page_id == "ocr_cccd":
@@ -171,6 +171,9 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         if "ocr_cccd" in self._page_ids:
             page = self.stack.widget(self._page_ids.index("ocr_cccd"))
+            flush = getattr(page, "flush_autosave", None)
+            if callable(flush):
+                flush()
             stop = getattr(page, "_stop", None)
             thread = getattr(page, "_thread", None)
             if callable(stop):

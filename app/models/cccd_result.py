@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, fields
 
 SOURCE_QR = "QR"
 SOURCE_OCR = "OCR"
+SOURCE_MANUAL = "MANUAL"
 SOURCE_NONE = "NONE"
 
 STATUS_CERTAIN = "CERTAIN"
@@ -19,6 +20,7 @@ STATUS_LABELS = {
 SOURCE_LABELS = {
     SOURCE_QR: "QR",
     SOURCE_OCR: "OCR",
+    SOURCE_MANUAL: "Sửa tay",
     SOURCE_NONE: "-",
 }
 
@@ -42,6 +44,7 @@ class CCCDResult:
     note: str | None = None
     raw_qr: str | None = None
     ocr_confidence: float | None = None
+    manual_edit: bool = False
 
     def status_label(self) -> str:
         return STATUS_LABELS.get(self.status, self.status)
@@ -65,3 +68,28 @@ class CCCDResult:
             self.status_label(),
             self.note or "",
         ]
+
+    def has_data(self) -> bool:
+        return any(
+            (
+                self.personal_id,
+                self.old_id,
+                self.full_name,
+                self.date_of_birth,
+                self.gender,
+                self.address,
+                self.issue_date,
+                self.father_name,
+                self.mother_name,
+                self.note,
+                self.source != SOURCE_NONE,
+            )
+        )
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CCCDResult:
+        allowed = {item.name for item in fields(cls)}
+        return cls(**{key: value for key, value in data.items() if key in allowed})

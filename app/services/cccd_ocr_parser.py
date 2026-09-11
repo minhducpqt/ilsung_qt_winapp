@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from app.services.cccd_qr_parser import CCCD_ID_RE, OLD_ID_RE, normalize_qr_date
+from app.services.vietnamese_names import looks_like_vietnamese_name, normalize_person_name, pick_vietnamese_name
 
 CCCD_IN_TEXT_RE = re.compile(r"\b(\d{12})\b")
 OLD_IN_TEXT_RE = re.compile(r"\b(\d{9})\b")
@@ -58,11 +59,11 @@ def _norm(text: str) -> str:
 
 
 def _looks_like_name(text: str) -> bool:
-    cleaned = text.strip()
-    if len(cleaned) < 4 or any(ch.isdigit() for ch in cleaned):
-        return False
-    words = [part for part in re.split(r"\s+", cleaned) if part]
-    return len(words) >= 2
+    return looks_like_vietnamese_name(text) or (
+        len(text.strip()) >= 4
+        and not any(ch.isdigit() for ch in text)
+        and len(text.split()) >= 2
+    )
 
 
 def _normalize_gender(text: str) -> str | None:
@@ -108,6 +109,23 @@ def _after_label(lines: list[str], labels: tuple[str, ...]) -> str | None:
                     if nxt and not _is_labelish(nxt):
                         return nxt
     return None
+
+
+def _collect_dates(lines: list[str], blob: str) -> list[str]:
+    found: list[str] = []
+    for text in [*lines, blob]:
+        for match in DATE_SEP_RE.finditer(text):
+            day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            if 1 <= day <= 31 and 1 <= month <= 12 and 1900 <= year <= 2100:
+                value = f"{day:02d}/{month:02d}/{year}"
+                if value not in found:
+                    found.append(value)
+        for match in DATE_COMPACT_IN_TEXT_RE.finditer(text):
+            value = normalize_qr_date(match.group(1))
+            if value and value not in found:
+                found.append(value)
+    found.sort(key=lambda item: int(item.split("/")[-1]))
+    return found
 
 
 def _first_date(text: str) -> str | None:
@@ -160,10 +178,15 @@ def parse_cccd_ocr(items: list[OCRItem] | list[str], full_text: str | None = Non
 
     name = _after_label(lines, NAME_LABELS)
     if name and _looks_like_name(name):
-        result.full_name = name.strip()
+        result.full_name = normalize_person_name(name)
+    if not result.full_name:
+        result.full_name = pick_vietnamese_name(lines)
 
+    dates = _collect_dates(lines, blob)
     dob_line = _after_label(lines, DOB_LABELS)
-    result.date_of_birth = _first_date(dob_line) if dob_line else _first_date(blob)
+    result.date_of_birth = _first_date(dob_line) if dob_line else None
+    if not result.date_of_birth and dates:
+        result.date_of_birth = dates[0]
 
     gender_line = _after_label(lines, GENDER_LABELS)
     if gender_line:
@@ -182,12 +205,14 @@ def parse_cccd_ocr(items: list[OCRItem] | list[str], full_text: str | None = Non
     issue_line = _after_label(lines, ISSUE_LABELS)
     if issue_line:
         result.issue_date = _first_date(issue_line)
+    if not result.issue_date and len(dates) >= 2:
+        result.issue_date = dates[-1]
 
     father = _after_label(lines, FATHER_LABELS)
     if father and _looks_like_name(father):
-        result.father_name = father
+        result.father_name = normalize_person_name(father)
     mother = _after_label(lines, MOTHER_LABELS)
     if mother and _looks_like_name(mother):
-        result.mother_name = mother
+        result.mother_name = normalize_person_name(mother)
 
     return result

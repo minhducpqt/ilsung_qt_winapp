@@ -105,6 +105,7 @@ QT_winapp/
 - `Pillow` — xử lý ảnh
 - `qrcode` — tạo mã QR
 - `opencv-python-headless` — tìm và đọc QR trong ảnh
+- `zxing-cpp` — đọc QR CCCD trong ảnh chụp (ổn định hơn OpenCV)
 - `rapidocr-onnxruntime` — OCR ảnh / căn cước, chạy offline
 - `numpy` — xử lý ảnh
 
@@ -119,4 +120,6 @@ Cách test với folder ảnh mẫu:
 3. Chạy app, chọn thư mục, bấm **Bắt đầu phân tích**.
 4. Kết quả hiện từng dòng. Có thể **Dừng** giữa chừng rồi **Xuất Excel**.
 
-Pipeline: đọc QR trước → chỉ OCR khi QR không phải CCCD 12 số hợp lệ. App chạy offline.
+Pipeline: đọc QR trước (ZXing, rồi OpenCV) → chỉ OCR khi QR không phải CCCD 12 số hợp lệ. App chạy offline.
+
+Bảng kết quả giống Excel: bấm vào ô và sửa trực tiếp, có ảnh trên từng dòng. Bản nháp tự lưu vào thư mục dữ liệu người dùng (`ILSungOfficeTools/cccd_drafts`), mở lại cùng thư mục ảnh sẽ khôi phục.

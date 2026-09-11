@@ -5,4 +5,5 @@ Pillow
 numpy
 qrcode
 opencv-python-headless
+zxing-cpp
 rapidocr-onnxruntime

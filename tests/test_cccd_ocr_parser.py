@@ -18,13 +18,13 @@ def test_find_cccd_and_core_fields():
     ]
     parsed = parse_cccd_ocr(items)
     assert parsed.personal_id == "001234567890"
-    assert parsed.full_name == "NGUYEN VAN TEST"
+    assert parsed.full_name == "Nguyễn Văn Test"
     assert parsed.date_of_birth == "15/08/1990"
     assert parsed.gender == "Nam"
     assert parsed.address == "Ha Noi, Viet Nam"
     assert parsed.issue_date == "01/01/2021"
-    assert parsed.father_name == "NGUYEN VAN CHA"
-    assert parsed.mother_name == "TRAN THI ME"
+    assert parsed.father_name == "Nguyễn Văn Cha"
+    assert parsed.mother_name == "Trần Thị Me"
     assert parsed.old_id == "123456789"
 
 
@@ -33,6 +33,19 @@ def test_missing_fields_stay_empty():
     assert parsed.personal_id == "001234567890"
     assert parsed.full_name is None
     assert parsed.address is None
+
+
+def test_unlabeled_name_and_compact_dob():
+    items = [
+        OCRItem("CĂN CƯỚC CÔNG DÂN"),
+        OCRItem("LUU MINH DUC"),
+        OCRItem("24101987"),
+        OCRItem("Nam"),
+    ]
+    parsed = parse_cccd_ocr(items)
+    assert parsed.full_name == "Lưu Minh Đức"
+    assert parsed.date_of_birth == "24/10/1987"
+    assert parsed.gender == "Nam"
 
 
 def test_non_cccd_text():
@@ -52,4 +65,4 @@ def test_gender_female_and_dash_date():
     assert parsed.personal_id == "001987654321"
     assert parsed.gender == "Nữ"
     assert parsed.date_of_birth == "01/12/2001"
-    assert parsed.full_name == "TRAN THI TEST"
+    assert parsed.full_name == "Trần Thị Test"

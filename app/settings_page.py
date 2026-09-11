@@ -19,6 +19,7 @@ LIBRARY_CHECKS = (
     ("PIL", "Xử lý ảnh (Pillow)"),
     ("qrcode", "Tạo mã QR"),
     ("cv2", "Tìm và đọc QR trong ảnh (OpenCV)"),
+    ("zxingcpp", "Đọc QR CCCD trong ảnh chụp (ZXing)"),
     ("rapidocr_onnxruntime", "OCR ảnh / căn cước"),
 )
 

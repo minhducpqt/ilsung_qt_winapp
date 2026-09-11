@@ -259,10 +259,24 @@ QPushButton#heroGhostButton:hover {
     background-color: rgba(255, 255, 255, 0.08);
 }
 
-QFrame#featureCard {
+QFrame#featureCard,
+QFrame#featureCardReady {
     background-color: #FFFFFF;
     border: 1px solid #E5E7EB;
     border-radius: 12px;
+}
+
+QFrame#featureCardReady:hover,
+QFrame#featureCardReady:focus {
+    background-color: #F8FAFF;
+    border: 1px solid #93C5FD;
+}
+
+QLabel#featureHint {
+    color: #2563EB;
+    font-size: 12px;
+    font-weight: 600;
+    padding-top: 4px;
 }
 
 QLabel#featureTitle {
@@ -294,29 +308,43 @@ QLabel#soonBadge {
     color: #92400E;
 }
 
-QTableWidget#fileTable {
+QTableWidget#fileTable,
+QTableWidget#resultSheet {
     background-color: #FFFFFF;
     alternate-background-color: #F8FAFC;
-    border: 1px solid #E5E7EB;
-    border-radius: 8px;
+    border: 1px solid #C5C5C5;
+    border-radius: 6px;
     color: #111827;
     font-size: 13px;
-    gridline-color: #E5E7EB;
+    gridline-color: #D0D0D0;
+    selection-background-color: #D3E3FD;
+    selection-color: #111827;
 }
 
-QTableWidget#fileTable::item {
-    padding: 6px 8px;
+QTableWidget#fileTable::item,
+QTableWidget#resultSheet::item {
+    padding: 4px 6px;
+}
+
+QTableWidget#resultSheet::item:selected {
+    background-color: #D3E3FD;
+    color: #111827;
+}
+
+QTableWidget#resultSheet::item:focus {
+    background-color: #C5DCFA;
+    color: #111827;
 }
 
 QHeaderView::section {
-    background-color: #F3F4F6;
+    background-color: #E7E6E6;
     border: none;
-    border-bottom: 1px solid #E5E7EB;
-    border-right: 1px solid #E5E7EB;
+    border-bottom: 1px solid #B4B4B4;
+    border-right: 1px solid #B4B4B4;
     color: #374151;
     font-size: 12px;
     font-weight: 600;
-    padding: 8px;
+    padding: 6px 8px;
 }
 
 QSplitter::handle {

@@ -3,8 +3,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, fields
 
+from app.services.vietnamese_names import normalize_person_name
+
 CCCD_ID_RE = re.compile(r"^\d{12}$")
-OLD_ID_RE = re.compile(r"^\d{9}$")
+OLD_ID_RE = re.compile(r"^\d{8,12}$")
 DATE_COMPACT_RE = re.compile(r"^(\d{2})(\d{2})(\d{4})$")
 
 
@@ -64,11 +66,32 @@ def _normalize_gender(value: str | None) -> str | None:
     return mapping.get(text)
 
 
+def _old_id(value: str | None) -> str | None:
+    text = _clean(value)
+    if not text:
+        return None
+    digits = re.sub(r"\D", "", text)
+    if OLD_ID_RE.fullmatch(digits) and not CCCD_ID_RE.fullmatch(digits):
+        return digits
+    return None
+
+
+def _normalize_qr_payload(raw: str) -> str:
+    text = raw.strip().lstrip("\ufeff").replace("\x00", "").replace("\r", "")
+    match = re.search(r"(?<!\d)(\d{12}\|.*)$", text, flags=re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r"(?<!\d)(\d{12})(?!\d)", text)
+    if match and "|" not in text:
+        return match.group(1)
+    return text.strip()
+
+
 def parse_cccd_qr(raw: str | None) -> ParsedCCCDQR | None:
-    """Parse a decoded QR payload. Only certain=True when CCCD schema is valid."""
+    """Parse CCCD QR. Core 7 fields are the usual payload; anything after is optional."""
     if raw is None:
         return None
-    payload = raw.strip()
+    payload = _normalize_qr_payload(raw)
     if not payload:
         return None
 
@@ -80,15 +103,16 @@ def parse_cccd_qr(raw: str | None) -> ParsedCCCDQR | None:
         result.certain = True
         return result
 
+    if "|" not in payload:
+        return None
+
     parts = [part.strip() for part in payload.split("|")]
-    if len(parts) < 5 or not CCCD_ID_RE.fullmatch(parts[0]):
+    if not parts or not CCCD_ID_RE.fullmatch(parts[0]):
         return None
 
     result.personal_id = parts[0]
-    result.old_id = parts[1] if len(parts) > 1 and OLD_ID_RE.fullmatch(parts[1]) else _clean(parts[1]) if len(parts) > 1 else None
-    if result.old_id and not OLD_ID_RE.fullmatch(result.old_id):
-        result.old_id = None
-    result.full_name = _clean(parts[2]) if len(parts) > 2 else None
+    result.old_id = _old_id(parts[1]) if len(parts) > 1 else None
+    result.full_name = normalize_person_name(_clean(parts[2])) if len(parts) > 2 else None
     result.date_of_birth = normalize_qr_date(parts[3]) if len(parts) > 3 else None
     result.gender = _normalize_gender(parts[4]) if len(parts) > 4 else None
     result.address = _clean(parts[5]) if len(parts) > 5 else None
@@ -107,18 +131,19 @@ def parse_cccd_qr(raw: str | None) -> ParsedCCCDQR | None:
             continue
         remaining.append(extra)
 
-    if len(remaining) >= 1:
-        result.father_name = remaining[0]
+    if remaining:
+        result.father_name = normalize_person_name(remaining[0])
     if len(remaining) >= 2:
-        result.mother_name = remaining[1]
+        result.mother_name = normalize_person_name(remaining[1])
 
-    if len(parts) >= 11 and result.father_name:
-        result.schema = "child_or_family"
+    if result.father_name or result.mother_name:
+        result.schema = "adult_plus_optional"
     elif len(parts) >= 7:
         result.schema = "adult_v1"
     else:
-        result.schema = "adult_short"
+        result.schema = "adult_partial"
 
+    # QR CCCD is the strongest source: accept once the 12-digit ID and pipe schema are present.
     result.certain = True
     return result
 

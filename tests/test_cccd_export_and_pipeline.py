@@ -37,7 +37,7 @@ def test_processor_reads_valid_qr_as_certain(tmp_path: Path):
     assert result.status == STATUS_CERTAIN
     assert result.source == SOURCE_QR
     assert result.personal_id == "001234567890"
-    assert result.full_name == "NGUYEN VAN TEST"
+    assert result.full_name == "Nguyễn Văn Test"
 
 
 def test_processor_unrecognized_plain_image(tmp_path: Path):
@@ -48,3 +48,30 @@ def test_processor_unrecognized_plain_image(tmp_path: Path):
     result = CCCDProcessor().process_image(image)
     assert result.status != STATUS_CERTAIN
     assert result.file_name == "blank.png"
+
+
+def test_processor_reads_qr_on_phone_like_card_photo(tmp_path: Path):
+    """OpenCV often misses a clear QR on a resized phone photo of a card."""
+    from PIL import Image, ImageDraw
+
+    from app.services.cccd_qr_reader import read_qr_payloads
+
+    payload = "033087003934|145262302|Lưu Minh Đức|24101987|Nam|Hoàng Mai, Hà Nội|10072022"
+    qr_path = tmp_path / "qr.png"
+    create_qr(payload, qr_path)
+
+    canvas = Image.new("RGB", (3000, 1900), (20, 50, 110))
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle((180, 220, 2820, 1680), radius=24, fill=(236, 232, 220))
+    qr = Image.open(qr_path).convert("RGB").resize((200, 200))
+    canvas.paste(qr, (2420, 1340))
+    photo = canvas.resize((1280, 810), Image.Resampling.BILINEAR)
+    image = tmp_path / "phone_card.jpg"
+    photo.save(image, quality=80)
+
+    assert read_qr_payloads(image)
+    result = CCCDProcessor().process_image(image)
+    assert result.status == STATUS_CERTAIN
+    assert result.source == SOURCE_QR
+    assert result.personal_id == "033087003934"
+    assert result.full_name == "Lưu Minh Đức"
